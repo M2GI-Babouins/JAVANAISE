@@ -10,8 +10,8 @@
 
 package jvn;
 
-import java.rmi.*;
-import java.io.*;
+import java.io.Serializable;
+import java.rmi.Remote;
 
 
 /**

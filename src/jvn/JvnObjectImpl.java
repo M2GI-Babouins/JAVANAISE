@@ -2,6 +2,7 @@ package jvn;
 
 import java.io.Serializable;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class JvnObjectImpl implements JvnObject {
 	enum LOCKSTATE{
@@ -16,7 +17,7 @@ public class JvnObjectImpl implements JvnObject {
 
 	private final int id;
 	private LOCKSTATE lockstate;
-	ReadWriteLock lock;
+	ReadWriteLock lock = new ReentrantReadWriteLock();
 
 	JvnObjectImpl(int id){
 		this.id = id;
@@ -51,8 +52,8 @@ public class JvnObjectImpl implements JvnObject {
 
 	@Override
 	public Serializable jvnGetSharedObject() throws JvnException {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO Next
+		return this;
 	}
 
 	@Override

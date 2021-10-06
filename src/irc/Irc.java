@@ -7,12 +7,14 @@
 
 package irc;
 
+import jvn.JvnException;
+import jvn.JvnObject;
+import jvn.JvnServerImpl;
+
 import java.awt.*;
-import java.awt.event.*; 
-
-
-import jvn.*;
-import java.io.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.Serializable;
 
 
 public class Irc {
