@@ -28,8 +28,6 @@ public class Irc {
   **/
 	public static void main(String[] argv) {
 	   try {
-		   JvnRemoteCoord coord = new JvnCoordImpl();
-
 
 		// initialize JVN
 		JvnServerImpl js = JvnServerImpl.jvnGetServer();

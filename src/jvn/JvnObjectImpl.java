@@ -3,16 +3,15 @@ package jvn;
 import java.io.Serializable;
 import java.util.concurrent.locks.ReadWriteLock;
 
-enum LOCKSTATE{
-	NL,
-	RC,
-	WC,
-	R,
-	W,
-	RWC
-}
 public class JvnObjectImpl implements JvnObject {
-
+	enum LOCKSTATE{
+		NL,
+		RC,
+		WC,
+		R,
+		W,
+		RWC
+	}
 	private static final long serialVersionUID = 1L;
 
 	private final int id;

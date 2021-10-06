@@ -20,7 +20,9 @@ public class JvnCoordImpl
               extends UnicastRemoteObject 
 							implements JvnRemoteCoord{
 
-
+	public static void main(String[] argv) throws Exception {
+		JvnRemoteCoord coord = new JvnCoordImpl();
+	}
 	
 	private static final long serialVersionUID = 1L;
 	private int lastId = 0;
