@@ -19,16 +19,7 @@ import java.io.Serializable;
 public class JvnCoordImpl 	
               extends UnicastRemoteObject 
 							implements JvnRemoteCoord{
-	
 
-	enum LOCKSTATE{
-		NL,
-		RC,
-		WC,
-		R,
-		W,
-		RWC
-	}
 
 	
 	private static final long serialVersionUID = 1L;

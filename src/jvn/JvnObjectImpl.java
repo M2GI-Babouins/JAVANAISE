@@ -1,42 +1,47 @@
 package jvn;
 
 import java.io.Serializable;
+import java.util.concurrent.locks.ReadWriteLock;
 
-import jvn.JvnCoordImpl.LOCKSTATE;
-
+enum LOCKSTATE{
+	NL,
+	RC,
+	WC,
+	R,
+	W,
+	RWC
+}
 public class JvnObjectImpl implements JvnObject {
 
 	private static final long serialVersionUID = 1L;
 
-	private int id;
-	private LOCKSTATE lock;
-	JvnRemoteServer lock_owner;
-	
+	private final int id;
+	private LOCKSTATE lockstate;
+	ReadWriteLock lock;
+
 	JvnObjectImpl(int id){
 		this.id = id;
 	}
 	
 	@Override
 	public void jvnLockRead() throws JvnException {
-		if(lock == LOCKSTATE.NL || lock ==  LOCKSTATE.R) {
-			lock= LOCKSTATE.R ;
-		}
-		else {
-			
-		}
-
+		lock.readLock().lock();
+		lockstate = LOCKSTATE.R;
 	}
 
 	@Override
 	public void jvnLockWrite() throws JvnException {
-		 if(lock == LOCKSTATE.NL) {
-			 lock= LOCKSTATE.W ;
-		}
+		lock.writeLock().lock();
+		lockstate = LOCKSTATE.W;
 	}
 
 	@Override
 	public void jvnUnLock() throws JvnException {
-		lock = LOCKSTATE.NL;
+		if(lockstate == LOCKSTATE.R)
+			lock.readLock().unlock();
+		if(lockstate == LOCKSTATE.W)
+			lock.writeLock().unlock();
+		lockstate = LOCKSTATE.NL;
 	}
 
 	@Override
