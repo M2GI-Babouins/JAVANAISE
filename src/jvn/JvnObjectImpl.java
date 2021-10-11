@@ -1,10 +1,15 @@
-package jvn;
+ package jvn;
+
+import irc.Sentence;
 
 import java.io.Serializable;
+import java.rmi.RemoteException;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class JvnObjectImpl implements JvnObject {
+import static jvn.JvnServerImpl.jvnGetServer;
+
+ public class JvnObjectImpl implements JvnObject {
 	enum LOCKSTATE{
 		NL,
 		RC,
@@ -17,30 +22,33 @@ public class JvnObjectImpl implements JvnObject {
 
 	private final int id;
 	private LOCKSTATE lockstate;
-	ReadWriteLock lock = new ReentrantReadWriteLock();
+	Serializable shared;
 
-	JvnObjectImpl(int id){
+	JvnObjectImpl(int id, Serializable shared){
 		this.id = id;
+		this.shared = shared;
 	}
 	
 	@Override
 	public void jvnLockRead() throws JvnException {
-		lock.readLock().lock();
-		lockstate = LOCKSTATE.R;
+		if(lockstate == LOCKSTATE.NL || lockstate == LOCKSTATE.RC){
+			lockstate = LOCKSTATE.R;
+		}else{
+				jvnGetServer().jvnLockRead(id);
+		}
 	}
 
 	@Override
 	public void jvnLockWrite() throws JvnException {
-		lock.writeLock().lock();
-		lockstate = LOCKSTATE.W;
+		if(lockstate == LOCKSTATE.NL || lockstate == LOCKSTATE.WC){
+			lockstate = LOCKSTATE.W;
+		}else{
+				jvnGetServer().jvnLockWrite(id);
+		}
 	}
 
 	@Override
 	public void jvnUnLock() throws JvnException {
-		if(lockstate == LOCKSTATE.R)
-			lock.readLock().unlock();
-		if(lockstate == LOCKSTATE.W)
-			lock.writeLock().unlock();
 		lockstate = LOCKSTATE.NL;
 	}
 
@@ -52,8 +60,8 @@ public class JvnObjectImpl implements JvnObject {
 
 	@Override
 	public Serializable jvnGetSharedObject() throws JvnException {
-		// TODO Next
-		return this;
+		System.out.println("Shared Object : "+ shared);
+		return shared;
 	}
 
 	@Override

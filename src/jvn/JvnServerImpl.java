@@ -14,10 +14,10 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
 
 
-
-public class JvnServerImpl 	
+public class JvnServerImpl
               extends UnicastRemoteObject 
 							implements JvnLocalServer, JvnRemoteServer{ 
 	
@@ -28,8 +28,9 @@ public class JvnServerImpl
 	// A JVN server is managed as a singleton 
 	private static JvnServerImpl js = null;
 	JvnRemoteCoord jrc;
+	private final HashMap<Integer, JvnObjectImpl.LOCKSTATE> locks = new HashMap<>();
 
-  /**
+	/**
   * Default constructor
   * @throws JvnException
   **/
@@ -37,6 +38,7 @@ public class JvnServerImpl
 		super();
 	    Registry registry= LocateRegistry.getRegistry();
 	    jrc = (JvnRemoteCoord) registry.lookup("Coordinateur");
+	    System.out.println("le coordinateur est : "+jrc);
 	}
 	
   /**
@@ -83,8 +85,7 @@ public class JvnServerImpl
 			System.out.println("jvnGetObjectId error in jvnCreateObject : " + e.detail);
 			throw new JvnException();
 		}
-		JvnObject ob = new JvnObjectImpl(id); 
-		return ob;
+		return new JvnObjectImpl(id,o);
 
 	}
 	
@@ -129,7 +130,10 @@ public class JvnServerImpl
    public Serializable jvnLockRead(int joi)
 	 throws JvnException {
 	   try {
-			 return jrc.jvnLockRead(joi, js);
+		   	if (JvnObjectImpl.LOCKSTATE.NL != locks.get(joi) || JvnObjectImpl.LOCKSTATE.R != locks.get(joi) || JvnObjectImpl.LOCKSTATE.RC != locks.get(joi)){
+				this.jvnInvalidateReader(joi);
+			}
+			   return jrc.jvnLockRead(joi, js);
 		} catch (RemoteException e) {
 			System.out.println("jvnLockRead error : " + e.detail);
 			throw new JvnException();
@@ -145,6 +149,9 @@ public class JvnServerImpl
    public Serializable jvnLockWrite(int joi)
 	 throws JvnException {
 	   try {
+		   if(locks.get(joi) != JvnObjectImpl.LOCKSTATE.NL || locks.get(joi) != JvnObjectImpl.LOCKSTATE.W || locks.get(joi) != JvnObjectImpl.LOCKSTATE.WC){
+				this.jvnInvalidateWriter(joi);
+		   }
 			 return jrc.jvnLockWrite(joi, js);
 		} catch (RemoteException e) {
 			System.out.println("jvnLockWrite error : " + e.detail);
@@ -162,7 +169,7 @@ public class JvnServerImpl
 	**/
   public void jvnInvalidateReader(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-	   
+	   this.locks.put(joi, JvnObjectImpl.LOCKSTATE.NL);
   };
 	    
 	/**
@@ -172,8 +179,8 @@ public class JvnServerImpl
 	* @throws java.rmi.RemoteException,JvnException
 	**/
   public Serializable jvnInvalidateWriter(int joi)
-	throws java.rmi.RemoteException,jvn.JvnException { 
-		// to be completed 
+	throws java.rmi.RemoteException,jvn.JvnException {
+	  this.locks.put(joi, JvnObjectImpl.LOCKSTATE.NL);
 		return null;
 	};
 	
@@ -184,8 +191,8 @@ public class JvnServerImpl
 	* @throws java.rmi.RemoteException,JvnException
 	**/
    public Serializable jvnInvalidateWriterForReader(int joi)
-	 throws java.rmi.RemoteException,jvn.JvnException { 
-		// to be completed 
+	 throws java.rmi.RemoteException,jvn.JvnException {
+	   this.locks.put(joi, JvnObjectImpl.LOCKSTATE.NL);
 		return null;
 	 };
 

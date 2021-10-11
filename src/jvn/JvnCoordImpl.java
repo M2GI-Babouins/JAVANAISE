@@ -10,6 +10,7 @@
 package jvn;
 
 import java.io.Serializable;
+import java.rmi.NotBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
@@ -29,14 +30,15 @@ public class JvnCoordImpl
 	private final HashMap<String,JvnObject> registre = new HashMap<>();
 	private final HashMap<Integer,String> names = new HashMap<>();
 
-/**
+	/**
   * Default constructor
   * @throws JvnException
   **/
 public JvnCoordImpl() throws Exception {
 		Registry registry= LocateRegistry.getRegistry();
 		registry.bind("Coordinateur",this);
-	}
+		System.out.println("Coordinateur listening ...");
+}
 
   /**
   *  Allocate a NEW JVN object id (usually allocated to a 
@@ -60,7 +62,7 @@ public JvnCoordImpl() throws Exception {
 	 
 	  registre.put(jon, jo);
 	  names.put(jo.jvnGetObjectId(),jon);
-
+	  System.out.println("Registered Object : " + jon);
   }
   
   /**
@@ -71,7 +73,10 @@ public JvnCoordImpl() throws Exception {
   **/
   public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
-    return registre.get(jon);
+
+	  System.out.println("Requested Object : " + jon + " | Exist : " + registre.containsKey(jon));
+
+	  return registre.get(jon);
   }
   
   /**
@@ -113,7 +118,13 @@ public JvnCoordImpl() throws Exception {
 	**/
     public void jvnTerminate(JvnRemoteServer js)
 	 throws java.rmi.RemoteException, JvnException {
-	 // to be completed
+		try {
+			LocateRegistry.getRegistry().unbind("Coordinateur");
+		} catch (NotBoundException e) {
+			e.printStackTrace();
+		}
+
+		// to be completed
     }
 }
 

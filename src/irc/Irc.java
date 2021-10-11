@@ -37,9 +37,9 @@ public class Irc {
 		   // look up the IRC object in the JVN server
 		// if not found, create it, and register it in the JVN server
 		   JvnObject jo = js.jvnLookupObject("IRC");
-		   
+
 		if (jo == null) {
-			jo = js.jvnCreateObject((Serializable) new Sentence());
+			jo = js.jvnCreateObject(new Sentence());
 			// after creation, I have a write lock on the object
 			jo.jvnUnLock();
 			js.jvnRegisterObject("IRC", jo);
@@ -72,6 +72,9 @@ public class Irc {
 		Button write_button = new Button("write");
 		write_button.addActionListener(new writeListener(this));
 		frame.add(write_button);
+		Button unlock_button = new Button("unlock");
+		unlock_button.addActionListener(new unlockListener(this));
+		frame.add(unlock_button);
 		frame.setSize(545,201);
 		text.setBackground(Color.black); 
 		frame.setVisible(true);
@@ -99,9 +102,8 @@ public class Irc {
 		
 		// invoke the method
 		String s = ((Sentence)(irc.sentence.jvnGetSharedObject())).read();
-		
-		// unlock the object
-		irc.sentence.jvnUnLock();
+		 System.out.println("Object read :"+
+				 ((Sentence)(irc.sentence.jvnGetSharedObject())).read());
 		
 		// display the read value
 		irc.data.setText(s);
@@ -135,12 +137,37 @@ public class Irc {
 		
 		// invoke the method
 		((Sentence)(irc.sentence.jvnGetSharedObject())).write(s);
-		
-		// unlock the object
-		irc.sentence.jvnUnLock();
+		System.out.println("Object written :"+
+				((Sentence)(irc.sentence.jvnGetSharedObject())).read());
+
 	 } catch (JvnException je) {
 		   System.out.println("IRC problem  : " + je.getMessage());
 	 }
+	}
+}
+
+
+
+/**
+ * Internal class to manage user events (unlock) on the CHAT application
+ **/
+class unlockListener implements ActionListener {
+	Irc irc;
+
+	public unlockListener (Irc i) {
+		irc = i;
+	}
+
+	/**
+	 * Management of user events
+	 **/
+	public void actionPerformed (ActionEvent e) {
+		try {
+			// unlock the object
+			irc.sentence.jvnUnLock();
+		} catch (JvnException je) {
+			System.out.println("IRC problem  : " + je.getMessage());
+		}
 	}
 }
 

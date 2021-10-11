@@ -8,7 +8,9 @@
 
 package irc;
 
-public class Sentence implements java.io.Serializable {
+import java.io.Serializable;
+
+public class Sentence implements Serializable {
 	/**
 	 * 
 	 */
@@ -16,7 +18,7 @@ public class Sentence implements java.io.Serializable {
 	String 	data;
   
 	public Sentence() {
-		data = new String("");
+		data = "";
 	}
 	
 	public void write(String text) {
