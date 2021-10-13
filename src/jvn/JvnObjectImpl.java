@@ -1,11 +1,6 @@
  package jvn;
 
-import irc.Sentence;
-
 import java.io.Serializable;
-import java.rmi.RemoteException;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static jvn.JvnServerImpl.jvnGetServer;
 
@@ -21,7 +16,7 @@ import static jvn.JvnServerImpl.jvnGetServer;
 	private static final long serialVersionUID = 1L;
 
 	private final int id;
-	private LOCKSTATE lockstate;
+	private LOCKSTATE lock;
 	Serializable shared;
 
 	JvnObjectImpl(int id, Serializable shared){
@@ -31,29 +26,34 @@ import static jvn.JvnServerImpl.jvnGetServer;
 	
 	@Override
 	public void jvnLockRead() throws JvnException {
-		if(lockstate == LOCKSTATE.NL || lockstate == LOCKSTATE.RC){
-			lockstate = LOCKSTATE.R;
-		}else{
-				jvnGetServer().jvnLockRead(id);
+		if(lock == LOCKSTATE.NL || lock == LOCKSTATE.RC){
+			lock = LOCKSTATE.R;
 		}
+
+		JvnLocalServer jvnserver = jvnGetServer();
+		if(jvnserver!= null)
+			jvnserver.jvnLockRead(id);
+
 	}
 
 	@Override
 	public void jvnLockWrite() throws JvnException {
-		if(lockstate == LOCKSTATE.NL || lockstate == LOCKSTATE.WC){
-			lockstate = LOCKSTATE.W;
-		}else{
-				jvnGetServer().jvnLockWrite(id);
+		if(lock == LOCKSTATE.NL || lock == LOCKSTATE.WC){
+			lock = LOCKSTATE.W;
 		}
+
+		JvnLocalServer jvnserver = jvnGetServer();
+		if(jvnserver!= null)
+			shared = jvnserver.jvnLockWrite(id);
 	}
 
 	@Override
 	public void jvnUnLock() throws JvnException {
-		lockstate = LOCKSTATE.NL;
+		lock = LOCKSTATE.NL;
 	}
 
 	@Override
-	public int jvnGetObjectId() throws JvnException {
+	public int jvnGetObjectId() {
 		return this.id;
 	}
 	
@@ -66,20 +66,19 @@ import static jvn.JvnServerImpl.jvnGetServer;
 
 	@Override
 	public void jvnInvalidateReader() throws JvnException {
-		// TODO Auto-generated method stub
-
+		lock = LOCKSTATE.NL;
 	}
 
 	@Override
 	public Serializable jvnInvalidateWriter() throws JvnException {
-		// TODO Auto-generated method stub
-		return null;
+		lock = LOCKSTATE.NL;
+		return this;
 	}
 
 	@Override
 	public Serializable jvnInvalidateWriterForReader() throws JvnException {
-		// TODO Auto-generated method stub
-		return null;
+		lock = LOCKSTATE.NL;
+		return this;
 	}
 
 }

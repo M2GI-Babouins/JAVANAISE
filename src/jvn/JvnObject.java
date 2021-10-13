@@ -44,8 +44,7 @@ public interface JvnObject extends Serializable {
 	* Get the object identification
 	* @throws JvnException
 	**/
-	public int jvnGetObjectId()
-	throws jvn.JvnException; 
+	public int jvnGetObjectId();
 	
 	/**
 	* Get the shared object associated to this JvnObject

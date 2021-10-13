@@ -15,6 +15,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
+import java.util.Optional;
 
 
 public class JvnCoordImpl 	
@@ -22,13 +23,14 @@ public class JvnCoordImpl
 							implements JvnRemoteCoord{
 
 	public static void main(String[] argv) throws Exception {
-		JvnRemoteCoord coord = new JvnCoordImpl();
+		new JvnCoordImpl();
 	}
 	
 	private static final long serialVersionUID = 1L;
 	private int lastId = 0;
 	private final HashMap<String,JvnObject> registre = new HashMap<>();
 	private final HashMap<Integer,String> names = new HashMap<>();
+	private final HashMap<Integer,JvnRemoteServer> locks = new HashMap<>();
 
 	/**
   * Default constructor
@@ -37,7 +39,9 @@ public class JvnCoordImpl
 public JvnCoordImpl() throws Exception {
 		Registry registry= LocateRegistry.getRegistry();
 		registry.bind("Coordinateur",this);
-		System.out.println("Coordinateur listening ...");
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {try{ LocateRegistry.getRegistry().unbind("Coordinateur");}catch (Exception ignored){}}));
+
+	System.out.println("Coordinateur listening ...");
 }
 
   /**
@@ -89,10 +93,16 @@ public JvnCoordImpl() throws Exception {
    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
 	   String jon = names.get(joi);
-	   JvnObject jo = registre.get(jon) ;
-	   jo.jvnLockRead();
+	   JvnObject jo = registre.get(jon);
 
-	   return jo;
+	   JvnRemoteServer lock_owner = locks.get(joi);
+		if(lock_owner != null){
+			lock_owner.jvnInvalidateReader(joi);
+		}
+
+		jo.jvnLockRead();
+
+	   return jo.jvnGetSharedObject();
    }
 
   /**
@@ -106,9 +116,15 @@ public JvnCoordImpl() throws Exception {
    throws java.rmi.RemoteException, JvnException{
 	   String jon = names.get(joi);
 	   JvnObject jo = registre.get(jon) ;
+
+	   JvnRemoteServer lock_owner = locks.get(joi);
+	   if(lock_owner != null){
+		  jo = (JvnObject) lock_owner.jvnInvalidateWriter(joi);
+	   }
+
 	   jo.jvnLockWrite();
 
-	   return jo;
+	   return jo.jvnGetSharedObject();
    }
 
 	/**
@@ -118,14 +134,9 @@ public JvnCoordImpl() throws Exception {
 	**/
     public void jvnTerminate(JvnRemoteServer js)
 	 throws java.rmi.RemoteException, JvnException {
-		try {
-			LocateRegistry.getRegistry().unbind("Coordinateur");
-		} catch (NotBoundException e) {
-			e.printStackTrace();
-		}
+		locks.values().removeIf(value -> value == js);
 
-		// to be completed
-    }
+	}
 }
 
- 
+

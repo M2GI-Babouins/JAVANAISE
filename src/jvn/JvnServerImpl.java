@@ -14,7 +14,11 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 
 
 public class JvnServerImpl
@@ -28,7 +32,7 @@ public class JvnServerImpl
 	// A JVN server is managed as a singleton 
 	private static JvnServerImpl js = null;
 	JvnRemoteCoord jrc;
-	private final HashMap<Integer, JvnObjectImpl.LOCKSTATE> locks = new HashMap<>();
+	private final ArrayList<JvnObject> locks = new ArrayList<>();
 
 	/**
   * Default constructor
@@ -38,7 +42,6 @@ public class JvnServerImpl
 		super();
 	    Registry registry= LocateRegistry.getRegistry();
 	    jrc = (JvnRemoteCoord) registry.lookup("Coordinateur");
-	    System.out.println("le coordinateur est : "+jrc);
 	}
 	
   /**
@@ -130,16 +133,13 @@ public class JvnServerImpl
    public Serializable jvnLockRead(int joi)
 	 throws JvnException {
 	   try {
-		   	if (JvnObjectImpl.LOCKSTATE.NL != locks.get(joi) || JvnObjectImpl.LOCKSTATE.R != locks.get(joi) || JvnObjectImpl.LOCKSTATE.RC != locks.get(joi)){
-				this.jvnInvalidateReader(joi);
-			}
-			   return jrc.jvnLockRead(joi, js);
-		} catch (RemoteException e) {
-			System.out.println("jvnLockRead error : " + e.detail);
-			throw new JvnException();
-		}
+		   return jrc.jvnLockRead(joi,this);
+	   } catch (RemoteException e) {
+		   e.printStackTrace();
+		   return null;
+	   }
 
-	}	
+   }
 	/**
 	* Get a Write lock on a JVN object 
 	* @param joi : the JVN object identification
@@ -149,15 +149,12 @@ public class JvnServerImpl
    public Serializable jvnLockWrite(int joi)
 	 throws JvnException {
 	   try {
-		   if(locks.get(joi) != JvnObjectImpl.LOCKSTATE.NL || locks.get(joi) != JvnObjectImpl.LOCKSTATE.W || locks.get(joi) != JvnObjectImpl.LOCKSTATE.WC){
-				this.jvnInvalidateWriter(joi);
-		   }
-			 return jrc.jvnLockWrite(joi, js);
-		} catch (RemoteException e) {
-			System.out.println("jvnLockWrite error : " + e.detail);
-			throw new JvnException();
-		}
-	}	
+		   return jrc.jvnLockWrite(joi,this);
+	   } catch (RemoteException e) {
+		   e.printStackTrace();
+		   return null;
+	   }
+   }
 
 	
   /**
@@ -169,20 +166,24 @@ public class JvnServerImpl
 	**/
   public void jvnInvalidateReader(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-	   this.locks.put(joi, JvnObjectImpl.LOCKSTATE.NL);
-  };
-	    
+	  JvnObject jo = locks.stream().filter(o -> o.jvnGetObjectId() == joi).findAny().get();
+	  locks.remove(jo);
+	  jo.jvnInvalidateReader();
+  }
+
 	/**
 	* Invalidate the Write lock of the JVN object identified by id 
 	* @param joi : the JVN object id
-	* @return the current JVN object state
+	* @return the current JVN object states
 	* @throws java.rmi.RemoteException,JvnException
 	**/
   public Serializable jvnInvalidateWriter(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-	  this.locks.put(joi, JvnObjectImpl.LOCKSTATE.NL);
-		return null;
-	};
+	  JvnObject jo = locks.stream().filter(o -> o.jvnGetObjectId() == joi).findAny().get();
+	  locks.remove(jo);
+	  jo.jvnInvalidateWriter();
+	  return jo;
+	}
 	
 	/**
 	* Reduce the Write lock of the JVN object identified by id 
@@ -192,9 +193,11 @@ public class JvnServerImpl
 	**/
    public Serializable jvnInvalidateWriterForReader(int joi)
 	 throws java.rmi.RemoteException,jvn.JvnException {
-	   this.locks.put(joi, JvnObjectImpl.LOCKSTATE.NL);
-		return null;
-	 };
+	   JvnObject jo = locks.stream().filter(o -> o.jvnGetObjectId() == joi).findAny().get();
+	   locks.remove(jo);
+	   jo.jvnInvalidateWriterForReader();
+	   return jo;
+	 }
 
 }
 
