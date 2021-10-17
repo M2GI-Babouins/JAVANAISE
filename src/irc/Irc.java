@@ -33,6 +33,7 @@ public class Irc {
 
 		// initialize JVN
 		JvnServerImpl js = JvnServerImpl.jvnGetServer();
+		js.setName(argv[0]);
 
 		   // look up the IRC object in the JVN server
 		// if not found, create it, and register it in the JVN server

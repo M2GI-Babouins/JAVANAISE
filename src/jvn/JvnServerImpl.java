@@ -9,16 +9,13 @@
 
 package jvn;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.sql.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 
 public class JvnServerImpl
@@ -28,11 +25,20 @@ public class JvnServerImpl
   /**
 	 * 
 	 */
+	@Serial
 	private static final long serialVersionUID = 1L;
 	// A JVN server is managed as a singleton 
 	private static JvnServerImpl js = null;
-	JvnRemoteCoord jrc;
+	JvnRemoteCoord jrcoord;
 	private final ArrayList<JvnObject> locks = new ArrayList<>();
+
+	private String name;
+	public String getName(){
+		return name;
+	}
+	public void setName(String n){
+		name = n;
+	}
 
 	/**
   * Default constructor
@@ -41,7 +47,7 @@ public class JvnServerImpl
 	private JvnServerImpl() throws Exception {
 		super();
 	    Registry registry= LocateRegistry.getRegistry();
-	    jrc = (JvnRemoteCoord) registry.lookup("Coordinateur");
+	    jrcoord = (JvnRemoteCoord) registry.lookup("Coordinateur");
 	}
 	
   /**
@@ -54,6 +60,7 @@ public class JvnServerImpl
 			try {
 				js = new JvnServerImpl();
 			} catch (Exception e) {
+				System.out.println("Erreur a la creation de serveur :" + e.getMessage());
 				return null;
 			}
 		}
@@ -67,7 +74,7 @@ public class JvnServerImpl
 	public  void jvnTerminate()
 	throws jvn.JvnException {
 		try {
-			jrc.jvnTerminate(js);
+			jrcoord.jvnTerminate(js);
 		} catch (RemoteException e) {
 			System.out.println("jvnTerminate error : " + e.detail);
 			throw new JvnException();
@@ -83,7 +90,7 @@ public class JvnServerImpl
 	throws jvn.JvnException {
 		int id ;
 		try {
-			id = jrc.jvnGetObjectId();
+			id = jrcoord.jvnGetObjectId();
 		} catch (RemoteException e) {
 			System.out.println("jvnGetObjectId error in jvnCreateObject : " + e.detail);
 			throw new JvnException();
@@ -101,7 +108,7 @@ public class JvnServerImpl
 	public  void jvnRegisterObject(String jon, JvnObject jo)
 	throws jvn.JvnException {
 		try {
-			jrc.jvnRegisterObject(jon, jo, this);
+			jrcoord.jvnRegisterObject(jon, jo, this);
 		} catch (RemoteException e) {
 			System.out.println("jvnRegisterObject error : " + e.detail);
 			throw new JvnException();
@@ -117,7 +124,7 @@ public class JvnServerImpl
 	public  JvnObject jvnLookupObject(String jon)
 	throws jvn.JvnException {
 		 try {
-			 return jrc.jvnLookupObject(jon, js);
+			 return jrcoord.jvnLookupObject(jon, js);
 		} catch (RemoteException e) {
 			System.out.println("jvnLookupObject error : " + e.detail);
 			throw new JvnException();
@@ -133,7 +140,9 @@ public class JvnServerImpl
    public Serializable jvnLockRead(int joi)
 	 throws JvnException {
 	   try {
-		   return jrc.jvnLockRead(joi,this);
+		   Serializable s = jrcoord.jvnLockRead(joi,this);
+		   locks.add((JvnObject) s);
+		   return s;
 	   } catch (RemoteException e) {
 		   e.printStackTrace();
 		   return null;
@@ -149,7 +158,9 @@ public class JvnServerImpl
    public Serializable jvnLockWrite(int joi)
 	 throws JvnException {
 	   try {
-		   return jrc.jvnLockWrite(joi,this);
+		   Serializable s = jrcoord.jvnLockWrite(joi,this);
+		   locks.add((JvnObject) s);
+		   return s;
 	   } catch (RemoteException e) {
 		   e.printStackTrace();
 		   return null;

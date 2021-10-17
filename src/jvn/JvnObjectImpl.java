@@ -1,5 +1,6 @@
  package jvn;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 import static jvn.JvnServerImpl.jvnGetServer;
@@ -13,6 +14,7 @@ import static jvn.JvnServerImpl.jvnGetServer;
 		W,
 		RWC
 	}
+	@Serial
 	private static final long serialVersionUID = 1L;
 
 	private final int id;
@@ -22,40 +24,37 @@ import static jvn.JvnServerImpl.jvnGetServer;
 	JvnObjectImpl(int id, Serializable shared){
 		this.id = id;
 		this.shared = shared;
+		this.lock = LOCKSTATE.W;
 	}
-	
+	 @Override
+	 public int jvnGetObjectId() {
+		 return this.id;
+	 }
+
 	@Override
 	public void jvnLockRead() throws JvnException {
-		if(lock == LOCKSTATE.NL || lock == LOCKSTATE.RC){
+		if(lock != LOCKSTATE.R){
+			shared = ((JvnObject)jvnGetServer().jvnLockRead(id)).jvnGetSharedObject();
 			lock = LOCKSTATE.R;
 		}
-
-		JvnLocalServer jvnserver = jvnGetServer();
-		if(jvnserver!= null)
-			jvnserver.jvnLockRead(id);
-
 	}
 
 	@Override
 	public void jvnLockWrite() throws JvnException {
-		if(lock == LOCKSTATE.NL || lock == LOCKSTATE.WC){
+		if(lock != LOCKSTATE.W){
+			shared = ((JvnObject)jvnGetServer().jvnLockWrite(id)).jvnGetSharedObject();
 			lock = LOCKSTATE.W;
 		}
-
-		JvnLocalServer jvnserver = jvnGetServer();
-		if(jvnserver!= null)
-			shared = jvnserver.jvnLockWrite(id);
 	}
 
 	@Override
 	public void jvnUnLock() throws JvnException {
-		lock = LOCKSTATE.NL;
+		switch (lock) {
+			case R -> lock = LOCKSTATE.RC;
+			case W -> lock = LOCKSTATE.WC;
+		}
 	}
 
-	@Override
-	public int jvnGetObjectId() {
-		return this.id;
-	}
 	
 
 	@Override

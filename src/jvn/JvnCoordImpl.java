@@ -9,13 +9,13 @@
 
 package jvn;
 
+import java.io.Serial;
 import java.io.Serializable;
-import java.rmi.NotBoundException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Optional;
 
 
 public class JvnCoordImpl 	
@@ -26,11 +26,13 @@ public class JvnCoordImpl
 		new JvnCoordImpl();
 	}
 	
+	@Serial
 	private static final long serialVersionUID = 1L;
 	private int lastId = 0;
 	private final HashMap<String,JvnObject> registre = new HashMap<>();
 	private final HashMap<Integer,String> names = new HashMap<>();
-	private final HashMap<Integer,JvnRemoteServer> locks = new HashMap<>();
+	private final HashMap<Integer,ArrayList<JvnRemoteServer>> locks_r = new HashMap<>();
+	private final HashMap<Integer,JvnRemoteServer> locks_w = new HashMap<>();
 
 	/**
   * Default constructor
@@ -78,7 +80,7 @@ public JvnCoordImpl() throws Exception {
   public JvnObject jvnLookupObject(String jon, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
 
-	  System.out.println("Requested Object : " + jon + " | Exist : " + registre.containsKey(jon));
+	  System.out.println("Requested Object by "+ js.getName() +" : " + jon + " | Exist : " + registre.containsKey(jon));
 
 	  return registre.get(jon);
   }
@@ -92,17 +94,24 @@ public JvnCoordImpl() throws Exception {
   **/
    public Serializable jvnLockRead(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
+	   System.out.println("Lock R demandé par " + js.getName() + " sur " + joi);
 	   String jon = names.get(joi);
 	   JvnObject jo = registre.get(jon);
 
-	   JvnRemoteServer lock_owner = locks.get(joi);
+	   //On verifie les write locks
+	   JvnRemoteServer lock_owner = locks_w.get(joi);
 		if(lock_owner != null){
-			lock_owner.jvnInvalidateReader(joi);
+			System.out.println("Invalidation demandée a "+ lock_owner.getName() +" sur " + joi);
+			jo = (JvnObject) lock_owner.jvnInvalidateWriter(joi);
+			locks_w.remove(joi);
 		}
 
-		jo.jvnLockRead();
+	    locks_r.computeIfAbsent(joi, k -> new ArrayList<>());
+		locks_r.get(joi).add(js);
 
-	   return jo.jvnGetSharedObject();
+	   System.out.println("Lock R accordé a " + js.getName() + " sur " + joi);
+
+	   return jo;
    }
 
   /**
@@ -114,17 +123,33 @@ public JvnCoordImpl() throws Exception {
   **/
    public Serializable jvnLockWrite(int joi, JvnRemoteServer js)
    throws java.rmi.RemoteException, JvnException{
+	   System.out.println("Lock W demandé par " + js.getName() + " sur " + joi);
 	   String jon = names.get(joi);
 	   JvnObject jo = registre.get(jon) ;
 
-	   JvnRemoteServer lock_owner = locks.get(joi);
-	   if(lock_owner != null){
-		  jo = (JvnObject) lock_owner.jvnInvalidateWriter(joi);
+		//On verifie les write locks
+	   JvnRemoteServer lock_owner_w = locks_w.get(joi);
+	   if(lock_owner_w != null){
+		   System.out.println("Invalidation demandée a "+ lock_owner_w.getName() +" sur " + joi);
+		   jo = (JvnObject) lock_owner_w.jvnInvalidateWriter(joi);
+		   locks_w.remove(joi);
 	   }
 
-	   jo.jvnLockWrite();
+	   //On verifie les read locks
+	   ArrayList<JvnRemoteServer> lock_owners_r = locks_r.get(joi);
+	   if(lock_owners_r != null){
+		   while (!lock_owners_r.isEmpty()){
+			   System.out.println("Invalidation demandée a "+ lock_owners_r.get(0).getName() +" sur " + joi);
+			   lock_owners_r.get(0).jvnInvalidateReader(joi);
+			   lock_owners_r.remove(0);
+		   }
+	   }
 
-	   return jo.jvnGetSharedObject();
+	   locks_w.put(joi,js);
+
+
+	   System.out.println("Lock W accordé a "+js.getName() +" sur " + joi);
+	   return jo;
    }
 
 	/**
@@ -134,7 +159,10 @@ public JvnCoordImpl() throws Exception {
 	**/
     public void jvnTerminate(JvnRemoteServer js)
 	 throws java.rmi.RemoteException, JvnException {
-		locks.values().removeIf(value -> value == js);
+		locks_w.values().removeIf(value -> value == js);
+		for (ArrayList<JvnRemoteServer> locks:locks_r.values()) {
+			locks.removeIf(value -> value == js);
+		}
 
 	}
 }

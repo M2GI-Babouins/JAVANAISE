@@ -19,7 +19,8 @@ import java.rmi.Remote;
  */
 
 public interface JvnRemoteServer extends Remote {
-	    
+	String getName() throws java.rmi.RemoteException,jvn.JvnException;
+	
 	/**
 	* Invalidate the Read lock of a JVN object 
 	* @param joi : the JVN object id
