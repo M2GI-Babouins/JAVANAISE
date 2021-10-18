@@ -46,8 +46,7 @@ public class Irc {
 			js.jvnRegisterObject("IRC", jo);
 		}
 		// create the graphical part of the Chat application
-		 new Irc(jo);
-	   
+		js.registerIrc(new Irc(jo));
 	   } catch (Exception e) {
 		   System.out.println("IRC problem : " + e.getMessage());
 	   }
@@ -80,6 +79,10 @@ public class Irc {
 		text.setBackground(Color.black); 
 		frame.setVisible(true);
 	}
+
+	public JvnObject getSentence(){
+		return sentence;
+	}
 }
 
 
@@ -105,11 +108,13 @@ public class Irc {
 		String s = ((Sentence)(irc.sentence.jvnGetSharedObject())).read();
 		 System.out.println("Object read :"+
 				 ((Sentence)(irc.sentence.jvnGetSharedObject())).read());
-		
-		// display the read value
+		 irc.sentence.jvnUnLock();
+
+		 // display the read value
 		irc.data.setText(s);
 		irc.text.append(s+"\n");
-	   } catch (JvnException je) {
+
+	 } catch (JvnException je) {
 		   System.out.println("IRC problem : " + je.getMessage());
 	   }
 	}
@@ -140,8 +145,9 @@ public class Irc {
 		((Sentence)(irc.sentence.jvnGetSharedObject())).write(s);
 		System.out.println("Object written :"+
 				((Sentence)(irc.sentence.jvnGetSharedObject())).read());
+		irc.sentence.jvnUnLock();
 
-	 } catch (JvnException je) {
+	   } catch (JvnException je) {
 		   System.out.println("IRC problem  : " + je.getMessage());
 	 }
 	}

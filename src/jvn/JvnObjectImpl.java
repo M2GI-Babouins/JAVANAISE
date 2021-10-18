@@ -24,7 +24,7 @@ import static jvn.JvnServerImpl.jvnGetServer;
 	JvnObjectImpl(int id, Serializable shared){
 		this.id = id;
 		this.shared = shared;
-		this.lock = LOCKSTATE.W;
+		this.lock = LOCKSTATE.NL;
 	}
 	 @Override
 	 public int jvnGetObjectId() {
@@ -33,26 +33,51 @@ import static jvn.JvnServerImpl.jvnGetServer;
 
 	@Override
 	public void jvnLockRead() throws JvnException {
-		if(lock != LOCKSTATE.R){
-			shared = ((JvnObject)jvnGetServer().jvnLockRead(id)).jvnGetSharedObject();
+		if (lock == LOCKSTATE.NL){
+			shared = ((JvnObject) jvnGetServer().jvnLockRead(id)).jvnGetSharedObject();
 			lock = LOCKSTATE.R;
 		}
+
+		if(lock == LOCKSTATE.RC){
+			lock = LOCKSTATE.R;
+		}
+
+		if(lock == LOCKSTATE.WC){
+			lock = LOCKSTATE.RWC;
+		}
+
 	}
 
 	@Override
 	public void jvnLockWrite() throws JvnException {
-		if(lock != LOCKSTATE.W){
-			shared = ((JvnObject)jvnGetServer().jvnLockWrite(id)).jvnGetSharedObject();
+		if(lock == LOCKSTATE.NL){
+			shared = ((JvnObject) jvnGetServer().jvnLockWrite(id)).jvnGetSharedObject();
+			lock = LOCKSTATE.W;
+		}
+
+		if(lock == LOCKSTATE.RC){
+			shared = ((JvnObject) jvnGetServer().jvnLockWrite(id)).jvnGetSharedObject();
+			lock = LOCKSTATE.W;
+		}
+
+		if(lock == LOCKSTATE.WC) {
 			lock = LOCKSTATE.W;
 		}
 	}
 
 	@Override
 	public void jvnUnLock() throws JvnException {
+		System.out.print("OldLock = " + lock);
 		switch (lock) {
-			case R -> lock = LOCKSTATE.RC;
-			case W -> lock = LOCKSTATE.WC;
+			case R -> {
+				lock = LOCKSTATE.RC;
+				Notify();		}
+			case W, RWC -> {
+				lock = LOCKSTATE.WC;
+				Notify();			}
+
 		}
+		System.out.println(" | OldLock = " + lock);
 	}
 
 	
@@ -65,19 +90,54 @@ import static jvn.JvnServerImpl.jvnGetServer;
 
 	@Override
 	public void jvnInvalidateReader() throws JvnException {
-		lock = LOCKSTATE.NL;
+		if(lock == LOCKSTATE.R) {
+			Wait();
+			lock = LOCKSTATE.NL;
+		}
+
+		if(lock == LOCKSTATE.RWC) {
+			Wait();
+			lock = LOCKSTATE.NL;
+		}
+
+		if(lock == LOCKSTATE.RC)
+			lock = LOCKSTATE.NL;
 	}
 
 	@Override
 	public Serializable jvnInvalidateWriter() throws JvnException {
-		lock = LOCKSTATE.NL;
+		if(lock == LOCKSTATE.W) {
+			Wait();
+			lock = LOCKSTATE.NL;
+		}
+
+		if(lock == LOCKSTATE.WC)
+			lock = LOCKSTATE.NL;
+
 		return this;
 	}
 
 	@Override
 	public Serializable jvnInvalidateWriterForReader() throws JvnException {
-		lock = LOCKSTATE.NL;
+		if(lock == LOCKSTATE.W) {
+			Wait();
+			lock = LOCKSTATE.NL;
+		}
+
+		if(lock == LOCKSTATE.WC)
+			lock = LOCKSTATE.NL;
+
 		return this;
 	}
 
+	private synchronized void Wait(){
+		try {
+			wait();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	 private synchronized  void Notify(){
+		notify();
+	 }
 }
