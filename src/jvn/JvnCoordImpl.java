@@ -65,10 +65,15 @@ public JvnCoordImpl() throws Exception {
   **/
   public void jvnRegisterObject(String jon, JvnObject jo, JvnRemoteServer js)
   throws java.rmi.RemoteException,jvn.JvnException{
-	 
-	  registre.put(jon, jo);
-	  names.put(jo.jvnGetObjectId(),jon);
-	  System.out.println("Registered Object : " + jon);
+
+	  if( ! registre.containsKey(jon)) {
+		  registre.put(jon, jo);
+		  names.put(jo.jvnGetObjectId(), jon);
+		  System.out.println("Registered Object : " + jon);
+	  }else{
+		  registre.put(jon, jo);
+		  System.out.println("Updated Object : " + jon);
+	  }
   }
   
   /**
@@ -101,13 +106,18 @@ public JvnCoordImpl() throws Exception {
 	   //On verifie les write locks
 	   JvnRemoteServer lock_owner = locks_w.get(joi);
 		if(lock_owner != null){
-			System.out.println("Invalidation demandée a "+ lock_owner.getName() +" sur " + joi);
-			jo = (JvnObject) lock_owner.jvnInvalidateWriter(joi);
+			if(js.equals(lock_owner)){
+				System.out.println("AutoInvalidation WfR sur " + joi);
+			}else{
+				System.out.println("Invalidation W demandée a "+ lock_owner.getName() +" sur " + joi);
+				jo = (JvnObject) lock_owner.jvnInvalidateWriterForReader(joi);
+			}
 			locks_w.remove(joi);
 		}
 
 	    locks_r.computeIfAbsent(joi, k -> new ArrayList<>());
 		locks_r.get(joi).add(js);
+	   registre.put(jon,jo);
 
 	   System.out.println("Lock R accordé a " + js.getName() + " sur " + joi);
 
@@ -130,7 +140,7 @@ public JvnCoordImpl() throws Exception {
 		//On verifie les write locks
 	   JvnRemoteServer lock_owner_w = locks_w.get(joi);
 	   if(lock_owner_w != null){
-		   System.out.println("Invalidation demandée a "+ lock_owner_w.getName() +" sur " + joi);
+		   System.out.println("Invalidation W demandée a "+ lock_owner_w.getName() +" sur " + joi);
 		   jo = (JvnObject) lock_owner_w.jvnInvalidateWriter(joi);
 		   locks_w.remove(joi);
 	   }
@@ -139,14 +149,18 @@ public JvnCoordImpl() throws Exception {
 	   ArrayList<JvnRemoteServer> lock_owners_r = locks_r.get(joi);
 	   if(lock_owners_r != null){
 		   while (!lock_owners_r.isEmpty()){
-			   System.out.println("Invalidation demandée a "+ lock_owners_r.get(0).getName() +" sur " + joi);
-			   lock_owners_r.get(0).jvnInvalidateReader(joi);
+			   if(js.equals(lock_owners_r.get(0))) {
+				   System.out.println("AutoInvalidation R sur " + joi);
+			   }else{
+				   System.out.println("Invalidation R demandée a "+ lock_owners_r.get(0).getName() +" sur " + joi);
+				   lock_owners_r.get(0).jvnInvalidateReader(joi);
+			   }
 			   lock_owners_r.remove(0);
 		   }
 	   }
 
 	   locks_w.put(joi,js);
-
+	   registre.put(jon,jo);
 
 	   System.out.println("Lock W accordé a "+js.getName() +" sur " + joi);
 	   return jo;

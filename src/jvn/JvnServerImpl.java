@@ -9,6 +9,8 @@
 
 package jvn;
 
+import irc.Irc;
+
 import java.io.Serial;
 import java.io.Serializable;
 import java.rmi.RemoteException;
@@ -29,8 +31,8 @@ public class JvnServerImpl
 	private static final long serialVersionUID = 1L;
 	// A JVN server is managed as a singleton 
 	private static JvnServerImpl js = null;
+	private Irc irc;
 	JvnRemoteCoord jrcoord;
-	private final ArrayList<JvnObject> locks = new ArrayList<>();
 
 	private String name;
 	public String getName(){
@@ -39,6 +41,10 @@ public class JvnServerImpl
 	public void setName(String n){
 		name = n;
 	}
+	public void registerIrc(Irc irc){
+		this.irc = irc;
+	}
+
 
 	/**
   * Default constructor
@@ -141,7 +147,6 @@ public class JvnServerImpl
 	 throws JvnException {
 	   try {
 		   Serializable s = jrcoord.jvnLockRead(joi,this);
-		   locks.add((JvnObject) s);
 		   return s;
 	   } catch (RemoteException e) {
 		   e.printStackTrace();
@@ -159,7 +164,6 @@ public class JvnServerImpl
 	 throws JvnException {
 	   try {
 		   Serializable s = jrcoord.jvnLockWrite(joi,this);
-		   locks.add((JvnObject) s);
 		   return s;
 	   } catch (RemoteException e) {
 		   e.printStackTrace();
@@ -177,8 +181,8 @@ public class JvnServerImpl
 	**/
   public void jvnInvalidateReader(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-	  JvnObject jo = locks.stream().filter(o -> o.jvnGetObjectId() == joi).findAny().get();
-	  locks.remove(jo);
+	  JvnObject jo = irc.getSentence();
+	  System.out.println("Invalidation R de l'objet : "+ jo.jvnGetObjectId());
 	  jo.jvnInvalidateReader();
   }
 
@@ -190,8 +194,8 @@ public class JvnServerImpl
 	**/
   public Serializable jvnInvalidateWriter(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-	  JvnObject jo = locks.stream().filter(o -> o.jvnGetObjectId() == joi).findAny().get();
-	  locks.remove(jo);
+	  JvnObject jo = irc.getSentence();
+	  System.out.println("Invalidation W de l'objet : "+ jo.jvnGetObjectId());
 	  jo.jvnInvalidateWriter();
 	  return jo;
 	}
@@ -204,8 +208,8 @@ public class JvnServerImpl
 	**/
    public Serializable jvnInvalidateWriterForReader(int joi)
 	 throws java.rmi.RemoteException,jvn.JvnException {
-	   JvnObject jo = locks.stream().filter(o -> o.jvnGetObjectId() == joi).findAny().get();
-	   locks.remove(jo);
+	   JvnObject jo = irc.getSentence();
+	   System.out.println("Invalidation WfR de l'objet : "+ jo.jvnGetObjectId());
 	   jo.jvnInvalidateWriterForReader();
 	   return jo;
 	 }
