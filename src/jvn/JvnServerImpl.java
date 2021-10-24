@@ -95,7 +95,7 @@ public class JvnServerImpl
 			System.out.println("jvnGetObjectId error in jvnCreateObject : " + e.detail);
 			throw new JvnException();
 		}
-		return new JvnObjectImpl(id,o);
+		return JvnDynamicProxy.newProxy(new JvnObjectImpl(id,o));
 
 	}
 	
