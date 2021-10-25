@@ -40,10 +40,10 @@ public interface JvnLocalServer {
 	/**
 	* Get the reference of a JVN object associated to a symbolic name
 	* @param jon : the JVN object symbolic name
-	* @return the JVN object 
+	* @return the JVN object
 	* @throws JvnException
 	**/
-	public  JvnObject jvnLookupObject(String jon)
+	public Object jvnLookupObject(String jon)
 	throws jvn.JvnException ; 
 	
 	

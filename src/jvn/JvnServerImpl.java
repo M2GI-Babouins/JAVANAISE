@@ -10,6 +10,7 @@
 package jvn;
 
 import irc.Irc;
+import irc.Sentence;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -17,7 +18,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
 
 
 public class JvnServerImpl
@@ -31,8 +31,8 @@ public class JvnServerImpl
 	private static final long serialVersionUID = 1L;
 	// A JVN server is managed as a singleton 
 	private static JvnServerImpl js = null;
-	private Irc irc;
 	JvnRemoteCoord jrcoord;
+	JvnObject jo;
 
 	private String name;
 	public String getName(){
@@ -40,9 +40,6 @@ public class JvnServerImpl
 	}
 	public void setName(String n){
 		name = n;
-	}
-	public void registerIrc(Irc irc){
-		this.irc = irc;
 	}
 
 
@@ -101,7 +98,7 @@ public class JvnServerImpl
 			System.out.println("jvnGetObjectId error in jvnCreateObject : " + e.detail);
 			throw new JvnException();
 		}
-		return JvnDynamicProxy.newProxy(new JvnObjectImpl(id,o));
+		return new JvnObjectImpl(id,o);
 
 	}
 	
@@ -124,13 +121,24 @@ public class JvnServerImpl
 	/**
 	* Provide the reference of a JVN object beeing given its symbolic name
 	* @param jon : the JVN object name
-	* @return the JVN object 
+	* @return the JVN object
 	* @throws JvnException
 	**/
-	public  JvnObject jvnLookupObject(String jon)
+	public Object jvnLookupObject(String jon)
 	throws jvn.JvnException {
+
+
 		 try {
-			 return jrcoord.jvnLookupObject(jon, js);
+			 System.out.println("Lookup for object : "+jon);
+			 jo = jrcoord.jvnLookupObject(jon, this);
+			 if (jo == null) {
+				 jo = jvnCreateObject(new Sentence());
+				 // after creation, I have a write lock on the object
+				 jo.jvnUnLock();
+				 jvnRegisterObject("IRC", jo);
+			 }
+
+			 return JvnDynamicProxy.newProxy(jo);
 		} catch (RemoteException e) {
 			System.out.println("jvnLookupObject error : " + e.detail);
 			throw new JvnException();
@@ -146,8 +154,7 @@ public class JvnServerImpl
    public Serializable jvnLockRead(int joi)
 	 throws JvnException {
 	   try {
-		   Serializable s = jrcoord.jvnLockRead(joi,this);
-		   return s;
+		   return jrcoord.jvnLockRead(joi, this);
 	   } catch (RemoteException e) {
 		   e.printStackTrace();
 		   return null;
@@ -163,8 +170,7 @@ public class JvnServerImpl
    public Serializable jvnLockWrite(int joi)
 	 throws JvnException {
 	   try {
-		   Serializable s = jrcoord.jvnLockWrite(joi,this);
-		   return s;
+		   return jrcoord.jvnLockWrite(joi, this);
 	   } catch (RemoteException e) {
 		   e.printStackTrace();
 		   return null;
@@ -181,7 +187,6 @@ public class JvnServerImpl
 	**/
   public void jvnInvalidateReader(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-	  JvnObject jo = irc.getSentence();
 	  System.out.println("Invalidation R de l'objet : "+ jo.jvnGetObjectId());
 	  jo.jvnInvalidateReader();
   }
@@ -194,7 +199,6 @@ public class JvnServerImpl
 	**/
   public Serializable jvnInvalidateWriter(int joi)
 	throws java.rmi.RemoteException,jvn.JvnException {
-	  JvnObject jo = irc.getSentence();
 	  System.out.println("Invalidation W de l'objet : "+ jo.jvnGetObjectId());
 	  jo.jvnInvalidateWriter();
 	  return jo;
@@ -208,7 +212,6 @@ public class JvnServerImpl
 	**/
    public Serializable jvnInvalidateWriterForReader(int joi)
 	 throws java.rmi.RemoteException,jvn.JvnException {
-	   JvnObject jo = irc.getSentence();
 	   System.out.println("Invalidation WfR de l'objet : "+ jo.jvnGetObjectId());
 	   jo.jvnInvalidateWriterForReader();
 	   return jo;

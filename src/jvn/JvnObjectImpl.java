@@ -26,6 +26,11 @@ import static jvn.JvnServerImpl.jvnGetServer;
 		this.shared = shared;
 		this.lock = LOCKSTATE.NL;
 	}
+
+	public LOCKSTATE getLock(){
+		return lock;
+	}
+
 	 @Override
 	 public int jvnGetObjectId() {
 		 return this.id;
@@ -77,7 +82,7 @@ import static jvn.JvnServerImpl.jvnGetServer;
 				Notify();			}
 
 		}
-		System.out.println(" | OldLock = " + lock);
+		System.out.println(" | NewLock = " + lock);
 	}
 
 	

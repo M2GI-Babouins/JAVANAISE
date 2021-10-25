@@ -10,7 +10,7 @@ package irc;
 
 import java.io.Serializable;
 
-public class Sentence implements Serializable {
+public class Sentence implements Serializable, ISentence {
 	/**
 	 * 
 	 */
@@ -20,10 +20,13 @@ public class Sentence implements Serializable {
 	public Sentence() {
 		data = "";
 	}
-	
+
+	@Action(name = "write")
 	public void write(String text) {
 		data = text;
 	}
+
+	@Action(name = "read")
 	public String read() {
 		return data;	
 	}
